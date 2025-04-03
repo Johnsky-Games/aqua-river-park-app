@@ -1,6 +1,6 @@
 import { hash, compare } from 'bcryptjs';
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { User } = require('../models').default;
 const { secret, expiresIn } = require('../config/jwt');
 const transporter = require('../config/mailer').default;
 const crypto = require('crypto');
