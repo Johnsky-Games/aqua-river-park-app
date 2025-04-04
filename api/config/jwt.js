@@ -1,2 +1,2 @@
 export const secret = process.env.JWT_SECRET || 'default_secret';
-export const expiresIn = '10min'; // 10 minutes
+export const expiresIn = process.env.JWT_EXPIRES_IN || '1d';

@@ -5,7 +5,7 @@ import { FaMoon, FaSun, FaUserCircle } from "react-icons/fa";
 import { useRef, useEffect, useState } from "react";
 import { useTheme } from "../context/useTheme";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "../context/auth-context";
+import { useAuth } from "../hooks/useAuth"; // ✅ Asegúrate de que apunta al hook
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

@@ -1,5 +1,5 @@
 import { useEffect, useState, ReactNode } from "react";
-import { AuthContext } from "./auth-context";
+import { AuthContext } from "./AuthContext";
 const [isLoading, setIsLoading] = useState(true); // ← NUEVO
 
 interface AuthProviderProps {
@@ -60,7 +60,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, userRole, login, logout, isLoading }}>
+    <AuthContext.Provider
+      value={{ isLoggedIn, userRole, login, logout, isLoading }}
+    >
       {children}
     </AuthContext.Provider>
   );
