@@ -1,23 +1,24 @@
-import multer, { diskStorage } from 'multer';
-import { extname } from 'path';
-import { randomBytes } from 'crypto';
+import multer from 'multer';
+import path from 'path';
+import crypto from 'crypto';
 
-const storage = diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'public/uploads/avatars');
-    },
-    filename: (req, file, cb) => {
-        const unique = randomBytes(10).toString('hex');
-        const ext = extname(file.originalname);
-        cb(null, `${unique}${ext}`);
-    },
+const storage = multer.diskStorage({
+  destination: 'public/uploads/avatars',
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const filename = crypto.randomBytes(16).toString('hex') + ext;
+    cb(null, filename);
+  }
 });
 
-export default multer({
-    storage,
-    fileFilter: (req, file, cb) => {
-        const allowed = ['.jpg', '.jpeg', '.png'];
-        const ext = extname(file.originalname).toLowerCase();
-        cb(null, allowed.includes(ext));
-    },
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowed = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
+    cb(null, allowed.includes(ext));
+  }
 });
+
+export default upload;
