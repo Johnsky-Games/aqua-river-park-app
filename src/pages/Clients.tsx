@@ -5,7 +5,7 @@ const Clients = () => {
   const [msg, setMsg] = useState('');
 
   useEffect(() => {
-    axiosClient.get('/protected/clients')
+    axiosClient.get<{ msg: string }>('/protected/clients')
       .then(res => setMsg(res.data.msg))
       .catch(() => setMsg('❌ Acceso denegado'));
   }, []);

@@ -1,5 +1,4 @@
-// src/pages/Home.tsx
+// ✅ Archivo: /src/pages/Home.tsx
 export default function Home() {
-    return <div>Página de inicio 🏠</div>;
-  }
-  
+  return <div>🏡 Página de inicio pública</div>;
+}

@@ -1,42 +1,54 @@
-// 📁 src/context/AuthContext.tsx
-import { createContext, useContext, useState, useEffect } from "react";
+// ✅ Archivo: /src/context/AuthContext.tsx
+import { useState, ReactNode } from "react";
+import { AuthContext } from "./AuthContextDefinition";
 
-interface AuthContextType {
+interface LoginResponse {
   token: string;
-  isLoggedIn: boolean;
-  userRole: string;
-  login: (newToken: string, role: string) => void;
-  logout: () => void;
+  role: string;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth debe usarse dentro de un AuthProvider");
-  }
-  return context;
-};
-
 interface AuthProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [token, setToken] = useState(() => localStorage.getItem("token") || "");
-  const [userRole, setUserRole] = useState(() => localStorage.getItem("role") || "");
+  const [token, setToken] = useState<string>(() => localStorage.getItem("token") || "");
+  const [userRole, setUserRole] = useState<string>(() => localStorage.getItem("role") || "");
 
-  const isLoggedIn = !!token;
+  const isLoggedIn: boolean = !!token;
 
-  const login = (newToken: string, role: string) => {
-    setToken(newToken);
-    setUserRole(role);
-    localStorage.setItem("token", newToken);
-    localStorage.setItem("role", role);
+  const login = async (email: string, password: string): Promise<void> => {
+    try {
+      const response = await fetch("http://localhost:3000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Error de autenticación");
+      }
+
+      const data: LoginResponse = await response.json();
+      setToken(data.token);
+      setUserRole(data.role);
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("role", data.role);
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error("Error de login:", error.message);
+        throw error;
+      } else {
+        console.error("Error desconocido durante el login", error);
+        throw new Error("Error inesperado durante el login");
+      }
+    }
   };
 
-  const logout = () => {
+  const logout = (): void => {
     setToken("");
     setUserRole("");
     localStorage.removeItem("token");

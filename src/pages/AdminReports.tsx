@@ -6,7 +6,7 @@ const AdminReports = () => {
 
   useEffect(() => {
     axiosClient.get('/protected/admin/reports')
-      .then(res => setMsg(res.data.msg))
+      .then((res: { data: { msg: string } }) => setMsg(res.data.msg))
       .catch(() => setMsg('❌ Sin permisos para reportes'));
   }, []);
 
