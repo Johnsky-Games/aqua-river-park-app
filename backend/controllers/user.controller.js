@@ -1,78 +1,113 @@
-const { User } = require('../models').default;
-const { hash, compare } = require('bcryptjs');
-const fs = require('fs');
-const path = require('path');
-const { validationResult } = require('express-validator');
+// 📁 backend/controllers/user.controller.js
 
-// Obtener datos del perfil
-exports.getProfile = async (req, res) => {
-  const user = await User.findByPk(req.user.id, {
-    attributes: { exclude: ['password_hash', 'confirmation_token', 'reset_token'] }
-  });
-  res.json(user);
+import fs from 'fs';
+import path from 'path';
+import { hash, compare } from 'bcryptjs';
+import { validationResult } from 'express-validator';
+import db from '../config/db.js';
+
+// ✅ Obtener perfil del usuario
+export const getProfile = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT id, name, email, phone, avatar_url, role_id FROM users WHERE id = ?',
+      [req.user.id]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Error al obtener perfil:', error);
+    res.status(500).json({ message: 'Error del servidor' });
+  }
 };
 
-// Actualizar nombre y número de teléfono
-exports.updateProfile = async (req, res) => {
+// ✅ Actualizar nombre y teléfono
+export const updateProfile = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-
   const { name, phone } = req.body;
-  const user = await User.findByPk(req.user.id);
-  user.name = name || user.name;
-  user.phone = phone || user.phone;
-  await user.save();
-  res.json({ msg: 'Perfil actualizado correctamente.' });
+
+  try {
+    await db.query(
+      'UPDATE users SET name = ?, phone = ? WHERE id = ?',
+      [name, phone, req.user.id]
+    );
+    res.json({ message: 'Perfil actualizado correctamente.' });
+  } catch (error) {
+    console.error('Error al actualizar perfil:', error);
+    res.status(500).json({ message: 'Error del servidor' });
+  }
 };
 
-// Cambiar correo
-exports.updateEmail = async (req, res) => {
+// ✅ Cambiar correo electrónico
+export const updateEmail = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-
   const { email } = req.body;
-  const existing = await User.findOne({ where: { email } });
-  if (existing && existing.id !== req.user.id)
-    return res.status(400).json({ msg: 'El correo ya está en uso.' });
 
-  const user = await User.findByPk(req.user.id);
-  user.email = email;
-  await user.save();
-  res.json({ msg: 'Correo actualizado.' });
+  try {
+    const [existing] = await db.query('SELECT id FROM users WHERE email = ? AND id != ?', [email, req.user.id]);
+    if (existing.length > 0) {
+      return res.status(400).json({ message: 'El correo ya está en uso.' });
+    }
+
+    await db.query('UPDATE users SET email = ? WHERE id = ?', [email, req.user.id]);
+    res.json({ message: 'Correo actualizado.' });
+  } catch (error) {
+    console.error('Error al actualizar correo:', error);
+    res.status(500).json({ message: 'Error del servidor' });
+  }
 };
 
-// Cambiar contraseña
-exports.updatePassword = async (req, res) => {
+// ✅ Cambiar contraseña
+export const updatePassword = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-
   const { currentPassword, newPassword } = req.body;
-  const user = await User.findByPk(req.user.id);
-  const match = await compare(currentPassword, user.password_hash);
-  if (!match) return res.status(400).json({ msg: 'Contraseña actual incorrecta.' });
 
-  user.password_hash = await hash(newPassword, 10);
-  await user.save();
-  res.json({ msg: 'Contraseña actualizada.' });
+  try {
+    const [users] = await db.query('SELECT password_hash FROM users WHERE id = ?', [req.user.id]);
+    const user = users[0];
+
+    const match = await compare(currentPassword, user.password_hash);
+    if (!match) {
+      return res.status(400).json({ message: 'Contraseña actual incorrecta.' });
+    }
+
+    const newHashed = await hash(newPassword, 10);
+    await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [newHashed, req.user.id]);
+
+    res.json({ message: 'Contraseña actualizada.' });
+  } catch (error) {
+    console.error('Error al actualizar contraseña:', error);
+    res.status(500).json({ message: 'Error del servidor' });
+  }
 };
 
-// Subir o actualizar avatar
-exports.uploadAvatar = async (req, res) => {
-  const user = await User.findByPk(req.user.id);
-  const filename = req.file.filename;
+// ✅ Subir o actualizar avatar
+export const uploadAvatar = async (req, res) => {
+  try {
+    const filename = req.file.filename;
+    const [users] = await db.query('SELECT avatar_url FROM users WHERE id = ?', [req.user.id]);
+    const user = users[0];
 
-  // Eliminar el anterior si existe
-  if (user.avatar_url && fs.existsSync(`public/uploads/avatars/${user.avatar_url}`)) {
-    fs.unlinkSync(`public/uploads/avatars/${user.avatar_url}`);
+    if (user.avatar_url) {
+      const filePath = path.join('public/uploads/avatars', user.avatar_url);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+
+    await db.query('UPDATE users SET avatar_url = ? WHERE id = ?', [filename, req.user.id]);
+    res.json({ message: 'Avatar actualizado.', avatar_url: filename });
+  } catch (error) {
+    console.error('Error al subir avatar:', error);
+    res.status(500).json({ message: 'Error del servidor' });
   }
-
-  user.avatar_url = filename;
-  await user.save();
-  res.json({ msg: 'Avatar actualizado.', avatar_url: filename });
 };
